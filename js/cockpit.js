@@ -9,6 +9,7 @@ function initCockpit() {
   renderRV(d);
   renderNavChart(d);
   renderTrades(d.recent_trades);
+  renderPositionBand(d);
   renderAnnualBar(d.annual_returns);
 }
 
@@ -65,6 +66,8 @@ function renderRV(d) {
     const isWinner = a.code === holding_code;
     const rStr = a.r_20d != null ? fmt(a.r_20d) : '--';
     const rCls = a.r_20d != null ? colorClass(a.r_20d) : '';
+    const volStr = a.vol_20d != null ? (a.vol_20d * 100).toFixed(1) + '%' : '--';
+    const rvStr = a.rv != null ? a.rv.toFixed(3) : (a.eligible ? '--' : '×');
     const tag = isWinner
       ? '<span class="tag tag-hold">持有</span>'
       : (!a.eligible ? '<span class="tag tag-neg">不参与</span>' : '');
@@ -72,6 +75,8 @@ function renderRV(d) {
       <tr class="${isWinner ? 'winner' : ''}">
         <td>${a.code} <span style="color:var(--text-dim);font-size:12px">${a.name}</span></td>
         <td class="${rCls}">${rStr}</td>
+        <td style="color:var(--text-dim)">${volStr}</td>
+        <td style="color:${isWinner ? 'var(--accent)' : 'inherit'};font-weight:${isWinner?700:400}">${rvStr}</td>
         <td>${tag}</td>
       </tr>`;
   }).join('');
@@ -99,6 +104,60 @@ function renderTrades(trades) {
       <span style="color:var(--accent)">${t.to_name}(${t.to})</span>
     </li>
   `).join('');
+}
+
+function renderPositionBand(d) {
+  // 从 nav 日期 + 切仓记录重建持仓色带
+  const trades = d.recent_trades;
+  const nav = d.nav;
+  const POS_COLORS = {
+    '512890': '#ff9800', '513100': '#448aff',
+    '515030': '#00c853', '515880': '#ab47bc', '131810': '#8892a4',
+  };
+  // 用切仓记录推断每日持仓
+  if (!trades || !trades.length) return;
+  const allDates = nav.dates;
+  const tradeMap = {};
+  for (const t of trades) tradeMap[t.date] = t.to;
+
+  let curPos = trades[0].from;
+  const positions = [];
+  for (const d of allDates) {
+    if (tradeMap[d]) curPos = tradeMap[d];
+    positions.push(curPos);
+  }
+
+  const container = document.getElementById('position-band');
+  if (!container) return;
+  const w = container.clientWidth || 800;
+  const n = positions.length;
+  const segW = Math.max(1, w / n);
+
+  // 用 canvas 绘制
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = 60;
+  canvas.style.width = '100%'; canvas.style.height = '60px';
+  const ctx = canvas.getContext('2d');
+  positions.forEach((p, i) => {
+    ctx.fillStyle = POS_COLORS[p] || '#666';
+    ctx.fillRect(Math.floor(i * w / n), 0, Math.ceil(w / n) + 1, 60);
+  });
+  // 图例
+  ctx.font = '11px sans-serif';
+  const legend = [['512890','#ff9800','红利低波'], ['513100','#448aff','纳指'],
+                  ['515030','#00c853','新能源车'], ['515880','#ab47bc','通信'],
+                  ['131810','#8892a4','逆回购']];
+  let lx = 8;
+  for (const [code, color, name] of legend) {
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, 4, 10, 10);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(name, lx + 14, 14);
+    lx += ctx.measureText(name).width + 30;
+  }
+
+  container.innerHTML = '';
+  container.appendChild(canvas);
 }
 
 function renderAnnualBar(annual) {

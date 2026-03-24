@@ -17,6 +17,7 @@
   <button class="tab-btn" data-tab="compare" onclick="switchTab('compare')">策略对比</button>
   <button class="tab-btn" data-tab="research" onclick="switchTab('research')">研究实验室</button>
   <div class="spacer"></div>
+  <button class="tab-btn" onclick="toggleTheme()" id="theme-btn" style="font-size:12px">☀ 浅色</button>
   <span class="update-time" id="update-time"></span>
 </nav>
 
@@ -40,6 +41,8 @@
           <tr>
             <th>标的</th>
             <th>20日收益R</th>
+            <th>年化波动V</th>
+            <th>R/V</th>
             <th>状态</th>
           </tr>
         </thead>
@@ -51,6 +54,11 @@
       <div class="card-title">最近切仓记录</div>
       <ul class="trade-list" id="trade-list"></ul>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">持仓分布色带（每日持仓标的）</div>
+    <div id="position-band" style="width:100%;height:60px;overflow:hidden;border-radius:4px"></div>
   </div>
 
   <div class="card" style="margin-top:16px">
@@ -106,16 +114,61 @@
 
 </div>
 
-<!-- ===== Tab 3: 研究实验室（占位） ===== -->
+<!-- ===== Tab 3: 研究实验室 ===== -->
 <div id="tab-research" class="tab-content">
-  <div class="card" style="text-align:center;padding:60px;color:var(--text-dim)">
-    研究实验室 — Phase 2 实现
+  <div id="research-content">
+
+    <div class="card">
+      <div class="card-title">候选策略综合对比（全期 + 样本外 + Bootstrap）</div>
+      <div style="overflow-x:auto">
+        <table class="rank-table" style="font-size:12px">
+          <thead>
+            <tr>
+              <th style="text-align:left">策略</th>
+              <th>全期CAGR</th><th>全期夏普</th><th>全期回撤</th>
+              <th>OOS年化</th><th>OOS夏普</th>
+              <th>Bootstrap p10</th><th>Bootstrap p50</th>
+              <th>稳健率(>20%)</th>
+            </tr>
+          </thead>
+          <tbody id="candidate-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">候选策略净值对比（样本外 OOS 2022~）</div>
+      <div id="oos-nav-chart" class="chart-box"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">Bootstrap 稳健性（OOS，400次block抽样）</div>
+        <table class="rank-table" style="font-size:12px">
+          <thead>
+            <tr>
+              <th style="text-align:left">策略</th>
+              <th>CAGR p10</th><th>CAGR p50</th><th>CAGR p90</th>
+              <th>Sharpe p10</th><th>Sharpe p50</th>
+            </tr>
+          </thead>
+          <tbody id="bootstrap-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">主策略参数优化结果（lb=15 冷却5 确认10 仓位85%）</div>
+        <div id="opt-section"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <!-- 数据文件（全局变量，兼容 file:// 协议） -->
 <script src="data/cockpit.js"></script>
 <script src="data/compare.js"></script>
+<script src="data/research.js"></script>
 
 <!-- ECharts CDN -->
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -124,6 +177,7 @@
 <script src="js/charts.js"></script>
 <script src="js/cockpit.js"></script>
 <script src="js/compare.js"></script>
+<script src="js/research.js"></script>
 <script src="js/app.js"></script>
 
 </body>

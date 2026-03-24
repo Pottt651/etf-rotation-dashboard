@@ -1,5 +1,10 @@
 // 全局路由 + Tab 初始化
 
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('theme-btn').textContent = isLight ? '🌙 深色' : '☀ 浅色';
+}
+
 function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => btn.classList.remove('active'));
@@ -8,6 +13,7 @@ function switchTab(name) {
 
   if (name === 'cockpit') initCockpit();
   if (name === 'compare') initCompare();
+  if (name === 'research') initResearch();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
