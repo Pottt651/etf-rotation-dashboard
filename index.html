@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ETF 轮动策略 Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<nav class="topbar">
+  <div class="logo">📈 ETF轮动</div>
+  <button class="tab-btn" data-tab="cockpit" onclick="switchTab('cockpit')">实盘驾驶舱</button>
+  <button class="tab-btn" data-tab="compare" onclick="switchTab('compare')">策略对比</button>
+  <button class="tab-btn" data-tab="research" onclick="switchTab('research')">研究实验室</button>
+  <div class="spacer"></div>
+  <span class="update-time" id="update-time"></span>
+</nav>
+
+<!-- ===== Tab 1: 实盘驾驶舱 ===== -->
+<div id="tab-cockpit" class="tab-content">
+
+  <div class="card signal-card" id="signal-card"></div>
+
+  <div id="kpi-grid" class="kpi-grid" style="margin-bottom:16px"></div>
+
+  <div class="card">
+    <div class="card-title">主策略净值曲线（含数据缩放）</div>
+    <div id="nav-chart" class="chart-box"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">四资产 20日 R/V 状态</div>
+      <table class="rv-table">
+        <thead>
+          <tr>
+            <th>标的</th>
+            <th>20日收益R</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody id="rv-table-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最近切仓记录</div>
+      <ul class="trade-list" id="trade-list"></ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">历年策略收益</div>
+    <div id="annual-bar-chart" style="height:240px"></div>
+  </div>
+
+</div>
+
+<!-- ===== Tab 2: 策略对比 ===== -->
+<div id="tab-compare" class="tab-content">
+
+  <div class="card">
+    <div class="card-title">净值对比（点击下方"对比"按钮添加策略）</div>
+    <div id="multi-nav-chart" class="chart-box"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">
+    <div class="card" style="overflow-x:auto">
+      <div class="card-title" style="display:flex;align-items:center;gap:8px">
+        策略排名
+        <span id="verdict-filter" style="display:flex;gap:4px"></span>
+      </div>
+      <table class="rank-table">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>策略</th>
+            <th>年化</th>
+            <th>夏普</th>
+            <th>回撤</th>
+            <th>实盘分</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rank-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">实盘评分雷达（点选策略刷新）</div>
+      <div id="radar-chart" style="height:320px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="overflow-x:auto">
+    <div class="card-title">历年收益对比</div>
+    <table class="annual-table">
+      <thead id="annual-thead"></thead>
+      <tbody id="annual-tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== Tab 3: 研究实验室（占位） ===== -->
+<div id="tab-research" class="tab-content">
+  <div class="card" style="text-align:center;padding:60px;color:var(--text-dim)">
+    研究实验室 — Phase 2 实现
+  </div>
+</div>
+
+<!-- 数据文件（全局变量，兼容 file:// 协议） -->
+<script src="data/cockpit.js"></script>
+<script src="data/compare.js"></script>
+
+<!-- ECharts CDN -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+<!-- 应用代码 -->
+<script src="js/charts.js"></script>
+<script src="js/cockpit.js"></script>
+<script src="js/compare.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
