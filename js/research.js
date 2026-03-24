@@ -106,44 +106,45 @@ function renderBootstrapTable(candidates) {
 function renderOptimizationTable(opt) {
   const el = document.getElementById('opt-section');
   if (!opt || !opt.length) {
-    el.innerHTML = '<div style="color:var(--text-dim);font-size:13px">运行 python optimize_main_strategy.py 生成优化结果</div>';
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:13px">运行 python optimize_deep.py 生成优化结果</div>';
     return;
   }
-  const cols = ['lookback','cooldown','confirm_lb','risk_weight','threshold',
-                'cagr_oos','sharpe_oos','maxdd_oos','switches_yr','boot_p10','4x_cagr'];
+  const cols = ['lookback','cooldown','confirm_lb','risk_weight',
+                'cagr_oos','sharpe_oos','maxdd_oos','switches_yr','boot_p10','boot_prob_pos'];
   const labels = {
-    lookback:'回看窗口', cooldown:'冷却期', confirm_lb:'确认窗口',
-    risk_weight:'仓位比例', threshold:'收益门槛',
+    lookback:'回看', cooldown:'冷却', confirm_lb:'确认窗口',
+    risk_weight:'仓位', threshold:'门槛',
     cagr_oos:'OOS年化', sharpe_oos:'OOS夏普', maxdd_oos:'OOS回撤',
-    switches_yr:'年换手', boot_p10:'Bootstrap p10', '4x_cagr':'4倍费率CAGR'
+    switches_yr:'年换手', boot_p10:'Boot p10', boot_prob_pos:'正收益率',
+    '4x_cagr':'4倍费率'
   };
 
-  // 最后一行是基线
-  const baseline = opt[opt.length - 1];
   const html = `
-    <table class="rank-table" style="font-size:12px">
+    <table class="rank-table" style="font-size:11px">
       <thead><tr>${cols.map(c => `<th>${labels[c]||c}</th>`).join('')}</tr></thead>
       <tbody>
         ${opt.map((row, i) => {
-          const isBase = i === opt.length - 1;
-          return `<tr style="${isBase ? 'background:rgba(136,146,164,0.1)' : 'background:rgba(230,184,0,0.05)'}">
+          return `<tr style="${i===0 ? 'background:rgba(230,184,0,0.12);font-weight:600' : ''}">
             ${cols.map(c => {
               const v = row[c];
               let txt = v != null ? (
                 ['cagr_oos','maxdd_oos','boot_p10','4x_cagr'].includes(c) ? fmt3(v) :
+                c === 'boot_prob_pos' ? (v*100).toFixed(0)+'%' :
                 c === 'risk_weight' ? (v*100).toFixed(0)+'%' :
                 c === 'threshold' ? (v*100).toFixed(1)+'%' :
                 typeof v === 'number' ? v.toFixed(c==='sharpe_oos'?2:1) : '--'
               ) : '--';
               let color = '';
-              if (c==='cagr_oos'||c==='boot_p10'||c==='4x_cagr') color = colorVal(v);
+              if (c==='cagr_oos'||c==='boot_p10') color = colorVal(v);
               if (c==='maxdd_oos') color = 'var(--red)';
-              return `<td style="color:${color}">${txt}${isBase && !color ? ' (基线)' : ''}</td>`;
+              if (c==='boot_prob_pos') color = v != null && v >= 0.99 ? 'var(--green)' : 'var(--text)';
+              return `<td style="color:${color||'inherit'}">${txt}</td>`;
             }).join('')}
           </tr>`;
         }).join('')}
       </tbody>
     </table>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:8px">第1行为当前采用参数 ✅ | Bootstrap 400次 OOS(2022~)抽样</div>
   `;
   el.innerHTML = html;
 }
