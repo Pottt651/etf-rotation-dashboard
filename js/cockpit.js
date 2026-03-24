@@ -8,7 +8,9 @@ function initCockpit() {
   renderKPI(d.kpi);
   renderRV(d);
   renderNavChart(d);
+  renderDrawdownChart(d);
   renderTrades(d.recent_trades);
+  renderLiveTrades();
   renderPositionBand(d);
   renderAnnualBar(d.annual_returns);
 }
@@ -92,6 +94,19 @@ function renderNavChart(d) {
   ]);
 }
 
+function renderDrawdownChart(d) {
+  const nav = d.nav;
+  const vals = nav.values;
+  const dates = nav.dates;
+  const dd = [];
+  let maxNav = vals[0];
+  for (let i = 0; i < vals.length; i++) {
+    if (vals[i] > maxNav) maxNav = vals[i];
+    dd.push(vals[i] / maxNav - 1);
+  }
+  drawdownChart('drawdown-chart', dates, dd);
+}
+
 function renderTrades(trades) {
   const list = document.getElementById('trade-list');
   // 倒序展示最近交易
@@ -106,24 +121,94 @@ function renderTrades(trades) {
   `).join('');
 }
 
+function renderLiveTrades() {
+  const container = document.getElementById('live-trades-section');
+  if (!container) return;
+  const data = window.LIVE_TRADES_DATA;
+  if (!data || !data.length) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:13px">暂无实盘交易记录</div>';
+    return;
+  }
+  const reversed = [...data].reverse();
+  const rows = reversed.map(t => `
+    <tr>
+      <td style="color:var(--text-dim)">${t.date}</td>
+      <td>${t.action}</td>
+      <td>${t.from_asset}<span style="color:var(--text-dim);font-size:11px"> (${t.from_code})</span></td>
+      <td style="color:var(--accent)">→</td>
+      <td>${t.to_asset}<span style="color:var(--text-dim);font-size:11px"> (${t.to_code})</span></td>
+      <td style="color:var(--text-dim);font-size:12px">${t.price_bought || '--'}</td>
+      <td style="color:var(--text-dim);font-size:12px">${t.note || ''}</td>
+    </tr>
+  `).join('');
+  container.innerHTML = `
+    <table class="rv-table" style="font-size:13px">
+      <thead>
+        <tr>
+          <th style="text-align:left">日期</th>
+          <th style="text-align:left">操作</th>
+          <th style="text-align:left">卖出</th>
+          <th></th>
+          <th style="text-align:left">买入</th>
+          <th style="text-align:right">买入价</th>
+          <th style="text-align:left">备注</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 function renderPositionBand(d) {
-  // 从 nav 日期 + 切仓记录重建持仓色带
-  const trades = d.recent_trades;
+  // Bug 1 fix: 直接使用 position_series 而不是从 recent_trades 重建
+  const posSeries = d.position_series;
   const nav = d.nav;
   const POS_COLORS = {
     '512890': '#ff9800', '513100': '#448aff',
     '515030': '#00c853', '515880': '#ab47bc', '131810': '#8892a4',
   };
-  // 用切仓记录推断每日持仓
-  if (!trades || !trades.length) return;
-  const allDates = nav.dates;
-  const tradeMap = {};
-  for (const t of trades) tradeMap[t.date] = t.to;
 
-  let curPos = trades[0].from;
+  // POS_MAP: key -> code
+  const KEY_TO_CODE = {
+    'dividend_lowvol': '512890',
+    'nasdaq': '513100',
+    'nev': '515030',
+    'telecom': '515880',
+    'repo': '131810',
+    'repo131810': '131810',
+  };
+
+  if (!posSeries || !posSeries.dates || !posSeries.dates.length) return;
+
+  // 构建 positionSeries date → code 映射
+  const posMap = {};
+  for (let i = 0; i < posSeries.dates.length; i++) {
+    const key = posSeries.values[i];
+    const code = KEY_TO_CODE[key] || key;
+    posMap[posSeries.dates[i]] = code;
+  }
+
+  // 对 nav.dates 中的每个日期，前向填充 position
+  const allDates = nav.dates;
+  let curPos = '131810';
   const positions = [];
-  for (const d of allDates) {
-    if (tradeMap[d]) curPos = tradeMap[d];
+  // 先找 posSeries 开始时的初始持仓
+  if (posSeries.dates.length > 0) {
+    curPos = KEY_TO_CODE[posSeries.values[0]] || posSeries.values[0];
+  }
+
+  // 重建从最早日期开始的持仓序列
+  // 用 posSeries 构建完整日期→持仓映射（前向填充逻辑：nav日期排列）
+  let posIdx = 0;
+  const posDates = posSeries.dates;
+  const posVals = posSeries.values;
+
+  for (const dt of allDates) {
+    // 推进 posIdx 直到 posDates[posIdx] <= dt
+    while (posIdx < posDates.length && posDates[posIdx] <= dt) {
+      curPos = KEY_TO_CODE[posVals[posIdx]] || posVals[posIdx];
+      posIdx++;
+    }
     positions.push(curPos);
   }
 
@@ -131,7 +216,6 @@ function renderPositionBand(d) {
   if (!container) return;
   const w = container.clientWidth || 800;
   const n = positions.length;
-  const segW = Math.max(1, w / n);
 
   // 用 canvas 绘制
   const canvas = document.createElement('canvas');

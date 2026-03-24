@@ -134,6 +134,54 @@ function multiNavChart(el, seriesList) {
   return navChart(el, seriesList);
 }
 
+function drawdownChart(el, dates, values) {
+  // Red area chart showing drawdown (negative values from 0 down)
+  if (typeof el === 'string') el = document.getElementById(el);
+  if (!el) return;
+  const chart = makeChart(el);
+  const opts = mergeDeep(BASE_OPTS, {
+    grid: { top: 10, right: 20, bottom: 30, left: 70, containLabel: false },
+    tooltip: {
+      trigger: 'axis',
+      formatter(params) {
+        const p = params[0];
+        const v = (p.value * 100).toFixed(2);
+        return `<div style="font-size:12px"><b>${p.axisValue}</b><br>回撤: <b style="color:#ff5252">${v}%</b></div>`;
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLabel: { color: COLORS.dim, fontSize: 10,
+        formatter(v) { return v.slice(0, 7); },
+        showMaxLabel: true,
+      },
+      axisLine: { lineStyle: { color: COLORS.border } },
+    },
+    yAxis: {
+      type: 'value',
+      max: 0,
+      axisLabel: {
+        color: COLORS.dim, fontSize: 10,
+        formatter: v => (v * 100).toFixed(0) + '%',
+      },
+      splitLine: { lineStyle: { color: COLORS.border, type: 'dashed' } },
+    },
+    series: [{
+      name: '回撤',
+      type: 'line',
+      data: values,
+      smooth: false,
+      symbol: 'none',
+      lineStyle: { color: '#ff5252', width: 1 },
+      itemStyle: { color: '#ff5252' },
+      areaStyle: { color: 'rgba(255,82,82,0.25)' },
+    }],
+  });
+  chart.setOption(opts);
+  return chart;
+}
+
 function radarChart(el, scores, name) {
   const chart = makeChart(el);
   const indicators = [

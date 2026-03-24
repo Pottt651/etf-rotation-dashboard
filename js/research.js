@@ -52,13 +52,39 @@ function renderOOSChart(candidates) {
   const hasnav = candidates.filter(c => c.nav && c.nav.dates && c.nav.dates.length > 0);
   if (!hasnav.length) return;
   const COLORS_LIST = ['#e6b800','#448aff','#00c853','#ff9800','#ab47bc','#ff5252','#00bcd4','#8892a4'];
-  const series = hasnav.map((c, i) => ({
-    name: c.label,
-    dates: c.nav.dates,
-    values: c.nav.values,
-    color: COLORS_LIST[i % COLORS_LIST.length],
-    width: 1.5,
-  }));
+
+  // Bug 4 fix: align all series to a common date union with forward-fill
+  const dateSet = new Set();
+  for (const c of hasnav) {
+    for (const d of c.nav.dates) dateSet.add(d);
+  }
+  const allDates = Array.from(dateSet).sort();
+
+  const series = hasnav.map((c, i) => {
+    const dateValMap = new Map();
+    for (let j = 0; j < c.nav.dates.length; j++) {
+      dateValMap.set(c.nav.dates[j], c.nav.values[j]);
+    }
+    const alignedValues = [];
+    let lastVal = null;
+    for (const dt of allDates) {
+      if (dateValMap.has(dt)) {
+        lastVal = dateValMap.get(dt);
+      }
+      if (dt >= c.nav.dates[0]) {
+        alignedValues.push(lastVal);
+      } else {
+        alignedValues.push(null);
+      }
+    }
+    return {
+      name: c.label,
+      dates: allDates,
+      values: alignedValues,
+      color: COLORS_LIST[i % COLORS_LIST.length],
+      width: 1.5,
+    };
+  });
   navChart('oos-nav-chart', series);
 }
 

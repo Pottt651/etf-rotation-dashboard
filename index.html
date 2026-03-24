@@ -31,9 +31,10 @@
   <div class="card">
     <div class="card-title">主策略净值曲线（含数据缩放）</div>
     <div id="nav-chart" class="chart-box"></div>
+    <div id="drawdown-chart" style="height:150px;margin-top:-8px"></div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="two-col-grid">
     <div class="card">
       <div class="card-title">四资产 20日 R/V 状态</div>
       <table class="rv-table">
@@ -51,9 +52,14 @@
     </div>
 
     <div class="card">
-      <div class="card-title">最近切仓记录</div>
+      <div class="card-title">最近切仓记录（回测）</div>
       <ul class="trade-list" id="trade-list"></ul>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">实盘交易记录</div>
+    <div id="live-trades-section"></div>
   </div>
 
   <div class="card" style="margin-top:16px">
@@ -72,7 +78,15 @@
 <div id="tab-compare" class="tab-content">
 
   <div class="card">
-    <div class="card-title">净值对比（点击下方"对比"按钮添加策略）</div>
+    <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      净值对比（点击下方"对比"按钮添加策略）
+      <span id="time-range-filter" style="display:flex;gap:4px;margin-left:auto">
+        <button class="tab-btn" style="padding:4px 12px;font-size:12px" onclick="filterTimeRange('YTD', this)">YTD</button>
+        <button class="tab-btn" style="padding:4px 12px;font-size:12px" onclick="filterTimeRange('1Y', this)">1Y</button>
+        <button class="tab-btn" style="padding:4px 12px;font-size:12px" onclick="filterTimeRange('3Y', this)">3Y</button>
+        <button class="tab-btn active" style="padding:4px 12px;font-size:12px" onclick="filterTimeRange('全部', this)">全部</button>
+      </span>
+    </div>
     <div id="multi-nav-chart" class="chart-box"></div>
   </div>
 
@@ -169,6 +183,7 @@
 <script src="data/cockpit.js"></script>
 <script src="data/compare.js"></script>
 <script src="data/research.js"></script>
+<script src="data/live_trades.js"></script>
 
 <!-- ECharts CDN -->
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>

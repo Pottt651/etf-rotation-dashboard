@@ -5,6 +5,7 @@ let multiChart = null;
 let radarChartInst = null;
 let selectedStrategies = new Set();
 let currentFilter = '全部';
+let currentTimeRange = '全部';
 
 function initCompare() {
   if (compareInited) return;
@@ -96,22 +97,99 @@ function initMultiNav(strategies) {
   if (main) updateRadar(main);
 }
 
+// 根据时间范围过滤日期+值序列
+function applyTimeRange(dates, values, range) {
+  if (range === '全部') return { dates, values };
+  const today = new Date();
+  let cutoff;
+  if (range === 'YTD') {
+    cutoff = new Date(today.getFullYear(), 0, 1);
+  } else if (range === '1Y') {
+    cutoff = new Date(today.getTime() - 365 * 24 * 3600 * 1000);
+  } else if (range === '3Y') {
+    cutoff = new Date(today.getTime() - 1095 * 24 * 3600 * 1000);
+  } else {
+    return { dates, values };
+  }
+  const cutStr = cutoff.toISOString().slice(0, 10);
+  let startIdx = 0;
+  for (let i = 0; i < dates.length; i++) {
+    if (dates[i] >= cutStr) { startIdx = i; break; }
+  }
+  const filteredDates = dates.slice(startIdx);
+  const filteredValues = values.slice(startIdx);
+  // 归一化：以第一个可见点为基准
+  if (filteredValues.length > 0) {
+    const base = filteredValues[0];
+    return {
+      dates: filteredDates,
+      values: filteredValues.map(v => v / base),
+    };
+  }
+  return { dates: filteredDates, values: filteredValues };
+}
+
+function filterTimeRange(range, btn) {
+  currentTimeRange = range;
+  document.querySelectorAll('#time-range-filter .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const d = window.COMPARE_DATA;
+  updateMultiNav(d.strategies);
+}
+
 function updateMultiNav(strategies) {
   const COLORS_LIST = ['#e6b800','#448aff','#00c853','#ff9800','#ab47bc','#ff5252','#00bcd4'];
-  const series = strategies
-    .filter(s => selectedStrategies.has(s.id))
-    .map((s, i) => ({
+  const selected = strategies.filter(s => selectedStrategies.has(s.id));
+  if (!selected.length) return;
+
+  // Bug 2 fix: align all series to a common date union with forward-fill
+  // Collect all unique dates across selected series
+  const dateSet = new Set();
+  for (const s of selected) {
+    for (const d of s.nav.dates) dateSet.add(d);
+  }
+  const allDates = Array.from(dateSet).sort();
+
+  // For each series, build Map of date->value, then forward-fill over allDates
+  const alignedSeries = selected.map((s, i) => {
+    const dateValMap = new Map();
+    for (let j = 0; j < s.nav.dates.length; j++) {
+      dateValMap.set(s.nav.dates[j], s.nav.values[j]);
+    }
+    const alignedValues = [];
+    let lastVal = null;
+    for (const dt of allDates) {
+      if (dateValMap.has(dt)) {
+        lastVal = dateValMap.get(dt);
+      }
+      // Only include dates on or after the series start date
+      if (dt >= s.nav.dates[0]) {
+        alignedValues.push(lastVal);
+      } else {
+        alignedValues.push(null);
+      }
+    }
+    return {
       name: s.name,
-      dates: s.nav.dates,
-      values: s.nav.values,
+      dates: allDates,
+      values: alignedValues,
       color: COLORS_LIST[i % COLORS_LIST.length],
       width: s.id === 'diversified_broad_plus_sharpe_2' ? 3 : 1.5,
-    }));
-  if (!series.length) return;
+      rawDates: s.nav.dates,
+      rawValues: s.nav.values,
+      id: s.id,
+    };
+  });
+
+  // Apply time range filter
+  const filteredSeries = alignedSeries.map(s => {
+    const { dates: fd, values: fv } = applyTimeRange(s.dates, s.values, currentTimeRange);
+    return { ...s, dates: fd, values: fv };
+  });
 
   const el = document.getElementById('multi-nav-chart');
   if (multiChart) { multiChart.dispose(); }
-  multiChart = navChart(el, series);
+  multiChart = navChart(el, filteredSeries);
 }
 
 function updateRadar(s) {

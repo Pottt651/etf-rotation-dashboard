@@ -198,3 +198,42 @@ body {
 .annual-table th { color: var(--text-dim); font-size: 11px; }
 .annual-cell-pos { color: var(--green); }
 .annual-cell-neg { color: var(--red); }
+
+/* === 移动端响应式 === */
+@media (max-width: 600px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .two-col-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+
+  .topbar .logo {
+    margin-right: 8px;
+    font-size: 14px;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .tab-content {
+    padding: 12px;
+  }
+
+  .signal-card .holding-code {
+    font-size: 28px;
+  }
+
+  .chart-box {
+    height: 280px;
+  }
+}
