@@ -13,6 +13,7 @@ function initCockpit() {
   renderLiveTrades();
   renderPositionBand(d);
   renderAnnualBar(d.annual_returns);
+  renderStrategyDetail(d);
 }
 
 function fmt(v, isPercent = true) {
@@ -251,4 +252,126 @@ function renderPositionBand(d) {
 
 function renderAnnualBar(annual) {
   annualBarChart('annual-bar-chart', annual);
+}
+
+function renderStrategyDetail(d) {
+  const el = document.getElementById('strategy-detail-body');
+  if (!el) return;
+  const note = d.optimization_note || {};
+  const kpi  = d.kpi || {};
+  const rec  = note.recommended || {};
+  const pool = note.pool_v3 || ['512800银行','515880通信','515030新能车','513500标普500'];
+  const vs   = note.oos_vs_v2 || {};
+
+  // 标的池色块
+  const assetColors = {'512800':'#e6b800','515880':'#ab47bc','515030':'#00c853','513500':'#448aff','131810':'#8892a4'};
+  const assetNames  = {'512800':'银行ETF','515880':'通信ETF','515030':'新能源车ETF','513500':'标普500ETF','131810':'逆回购'};
+  const allAssets   = ['512800','515880','515030','513500','131810'];
+
+  const poolHtml = allAssets.map(code => {
+    const isRepo = code === '131810';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;
+            border-radius:6px;background:var(--bg-hover);border-left:3px solid ${assetColors[code]}">
+      <span style="font-size:18px;font-weight:700;color:${assetColors[code]}">${code}</span>
+      <div>
+        <div style="font-weight:600;font-size:13px">${assetNames[code]}</div>
+        <div style="font-size:11px;color:var(--text-dim)">${isRepo ? '防守资产（现金等价）' : '风险资产'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 参数表
+  const params = [
+    ['回看窗口 lookback', `${rec.lookback || 15} 天`, '计算动量和波动率的天数'],
+    ['收益门槛 threshold', `${((rec.threshold||0.001)*100).toFixed(1)}%`, '15日涨幅必须高于此值才有资格'],
+    ['冷却期 cooldown',    `${rec.cooldown || 5} 天`, '换仓后强制持有的最短天数'],
+    ['确认窗口 confirm',   `${rec.confirm_lb || 10} 天`, '二次确认：候选资产确认期也必须为正'],
+    ['风险仓位 risk_weight', `${((rec.risk_weight||0.75)*100).toFixed(0)}%`, '75% 持风险资产，25% 始终在逆回购'],
+  ];
+  const paramHtml = params.map(([name, val, desc]) =>
+    `<tr>
+      <td style="padding:6px 12px;font-size:13px;color:var(--text-dim)">${name}</td>
+      <td style="padding:6px 12px;font-size:13px;font-weight:600;color:var(--accent);text-align:center">${val}</td>
+      <td style="padding:6px 12px;font-size:12px;color:var(--text-dim)">${desc}</td>
+    </tr>`
+  ).join('');
+
+  // OOS 指标
+  const oosRows = [
+    ['全期年化 (2020~)', `${(kpi.cagr*100).toFixed(1)}%`, `${kpi.sharpe}`, `${(kpi.max_drawdown*100).toFixed(1)}%`],
+    ['样本外 (2022~)',   `${(kpi.oos_cagr*100).toFixed(1)}%`, `${kpi.oos_sharpe}`, `${(kpi.oos_maxdd*100).toFixed(1)}%`],
+  ];
+  const oosHtml = oosRows.map(([label, cagr, sharpe, dd]) =>
+    `<tr>
+      <td style="padding:6px 12px;font-size:13px;color:var(--text-dim)">${label}</td>
+      <td style="padding:6px 12px;font-size:13px;font-weight:600;color:var(--green);text-align:center">${cagr}</td>
+      <td style="padding:6px 12px;font-size:13px;font-weight:600;text-align:center">${sharpe}</td>
+      <td style="padding:6px 12px;font-size:13px;color:var(--red);text-align:center">${dd}</td>
+    </tr>`
+  ).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+      <!-- 左列 -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">标的池</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">
+          ${poolHtml}
+        </div>
+
+        <div style="font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">信号逻辑</div>
+        <div style="font-size:13px;line-height:1.8;background:var(--bg-hover);padding:14px 16px;border-radius:6px;border-left:3px solid var(--accent)">
+          <div style="margin-bottom:4px"><span style="color:var(--accent);font-weight:700">每个交易日收盘后：</span></div>
+          <div>① 计算四资产各自 <b>15日收益 R</b> 和 <b>年化波动率 V</b></div>
+          <div>② 仅保留 R &gt; 0.1% 的资产（收益门槛）</div>
+          <div>③ 若该资产同时满足 <b>10日确认窗口也为正</b>，计算 <b>R/V 得分</b></div>
+          <div>④ 持有 R/V 最高的资产（75% 仓位 + 25% 逆回购）</div>
+          <div>⑤ 若无资产符合条件：<b>全仓逆回购</b>（防御模式）</div>
+          <div>⑥ 换仓后 <b>冷却 5 天</b>，期间不再重新判断</div>
+        </div>
+      </div>
+
+      <!-- 右列 -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">策略参数</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+          <tbody>${paramHtml}</tbody>
+        </table>
+
+        <div style="font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">回测验证（样本外 2022~2026）</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:6px 12px;font-size:12px;color:var(--text-dim);text-align:left;font-weight:400">时段</th>
+              <th style="padding:6px 12px;font-size:12px;color:var(--text-dim);text-align:center;font-weight:400">年化</th>
+              <th style="padding:6px 12px;font-size:12px;color:var(--text-dim);text-align:center;font-weight:400">夏普</th>
+              <th style="padding:6px 12px;font-size:12px;color:var(--text-dim);text-align:center;font-weight:400">最大回撤</th>
+            </tr>
+          </thead>
+          <tbody>${oosHtml}</tbody>
+        </table>
+
+        <div style="font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">观察池（备选方案）</div>
+        <div style="font-size:12px;background:var(--bg-hover);padding:12px 14px;border-radius:6px">
+          <div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--blue)">●</span>
+            <b style="margin-left:4px">创业板+5G+通信+标普500</b>
+            <span style="color:var(--text-dim);margin-left:8px">Sharpe 1.72 | MaxDD -11.1%</span>
+          </div>
+          <div>
+            <span style="color:var(--green)">●</span>
+            <b style="margin-left:4px">计算机+通信+红利低波+纳指</b>
+            <span style="color:var(--text-dim);margin-left:8px">Sharpe 1.70 | Bootstrap p10 26.4%</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:12px">
+          搜索依据：全32只行业ETF宇宙，8371个有效组合，样本外两次独立验证。
+          决策文档：output/strategy_v3_decision.md
+        </div>
+      </div>
+
+    </div>
+  `;
 }

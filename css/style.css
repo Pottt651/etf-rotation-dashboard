@@ -209,6 +209,10 @@ body {
     grid-template-columns: 1fr !important;
   }
 
+  #strategy-detail-body > div {
+    grid-template-columns: 1fr !important;
+  }
+
   .topbar {
     flex-wrap: wrap;
     padding: 8px 12px;
