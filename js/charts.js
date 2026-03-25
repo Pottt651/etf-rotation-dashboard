@@ -4,8 +4,11 @@ const COLORS = {
   accent: '#e6b800', green: '#00c853', red: '#ff5252',
   blue: '#448aff', dim: '#8892a4', border: '#2a3a5c',
   strategy: '#e6b800', benchmark: '#8892a4',
-  dividend_lowvol: '#ff9800', nasdaq: '#448aff',
+  // v3 池颜色
+  bank: '#e6b800', sp500: '#448aff',
   nev: '#00c853', telecom: '#ab47bc', repo131810: '#8892a4',
+  // v2 旧池（历史兼容）
+  dividend_lowvol: '#ff9800', nasdaq: '#22aaff',
 };
 
 const BASE_OPTS = {
