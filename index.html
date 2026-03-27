@@ -16,6 +16,7 @@
   <button class="tab-btn" data-tab="cockpit" onclick="switchTab('cockpit')">实盘驾驶舱</button>
   <button class="tab-btn" data-tab="compare" onclick="switchTab('compare')">策略对比</button>
   <button class="tab-btn" data-tab="research" onclick="switchTab('research')">研究实验室</button>
+  <button class="tab-btn" data-tab="report" onclick="switchTab('report')">研究报告</button>
   <div class="spacer"></div>
   <button class="tab-btn" onclick="toggleTheme()" id="theme-btn" style="font-size:12px">☀ 浅色</button>
   <span class="update-time" id="update-time"></span>
@@ -36,7 +37,7 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="two-col-grid">
     <div class="card">
-      <div class="card-title">四资产 15日 R/V 状态（银行+通信+新能车+标普500）</div>
+      <div class="card-title" id="rv-card-title">资产 R/V 状态（当前策略）</div>
       <table class="rv-table">
         <thead>
           <tr>
@@ -184,6 +185,304 @@
   </div>
 </div>
 
+<!-- ===== Tab 4: 研究报告 ===== -->
+<div id="tab-report" class="tab-content">
+<div style="max-width:960px;margin:0 auto;padding:0 8px">
+
+  <!-- 标题 -->
+  <div class="card" style="background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:28px 32px">
+    <div style="font-size:22px;font-weight:700;margin-bottom:8px">ETF 动量轮动策略 — 系统化研究报告 v2</div>
+    <div style="opacity:.8;font-size:13px">生成日期：2026-03-27 &nbsp;|&nbsp; 方法：CSCV + 真正WFO + Block Bootstrap + Bonferroni Holdout</div>
+  </div>
+
+  <!-- 方法论问题 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">一、旧研究的问题（为什么要重做）</div>
+    <table class="rank-table" style="font-size:13px">
+      <thead><tr><th style="text-align:left">问题</th><th style="text-align:left">描述</th><th style="text-align:left">影响</th></tr></thead>
+      <tbody>
+        <tr><td>ETF候选池人工选择偏误</td><td>手工选已知绩效好的ETF，等于用未来信息筛选标的</td><td style="color:#e53935">高估绩效</td></tr>
+        <tr><td>CSCV参数空间过窄</td><td>只有72种参数，集中在单一区间，PBO失真</td><td style="color:#e53935">无法检测过拟合</td></tr>
+        <tr><td>Walk-Forward固定参数</td><td>用全期最优参数评估WF，非真正滚动优化</td><td style="color:#e53935">乐观偏差</td></tr>
+        <tr><td>i.i.d. Bootstrap</td><td>独立采样忽略金融收益率序列自相关</td><td style="color:#e53935">低估尾部风险</td></tr>
+        <tr><td>Holdout无多重比较校正</td><td>7个候选同时测试，无Bonferroni校正</td><td style="color:#e53935">假阳性率高</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ETF宇宙 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">二、ETF 宇宙构建（系统化，无人工干预）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+      <div>
+        <div style="font-size:13px;margin-bottom:12px;color:var(--text-secondary)">从 QMT 全量 ~1489 只 ETF 系统筛选：</div>
+        <div style="display:flex;flex-direction:column;gap:6px" id="funnel-steps">
+          <div class="funnel-step" style="background:rgba(25,118,210,.12);padding:8px 12px;border-radius:6px;border-left:3px solid #1976d2">
+            <span style="font-weight:600">Step 1</span>：上市日期 ≤ 2018-12-31 <span style="float:right;color:#1976d2">保留有足够历史的ETF</span>
+          </div>
+          <div class="funnel-step" style="background:rgba(25,118,210,.12);padding:8px 12px;border-radius:6px;border-left:3px solid #1976d2">
+            <span style="font-weight:600">Step 2</span>：排除 债/货币/分级/增强 等22关键词
+          </div>
+          <div class="funnel-step" style="background:rgba(25,118,210,.12);padding:8px 12px;border-radius:6px;border-left:3px solid #1976d2">
+            <span style="font-weight:600">Step 3</span>：排除 511xxx 前缀（货币/逆回购产品）
+          </div>
+          <div class="funnel-step" style="background:rgba(25,118,210,.12);padding:8px 12px;border-radius:6px;border-left:3px solid #1976d2">
+            <span style="font-weight:600">Step 4</span>：日均成交额 ≥ 3000万（Plan B）
+          </div>
+          <div class="funnel-step" style="background:rgba(25,118,210,.12);padding:8px 12px;border-radius:6px;border-left:3px solid #1976d2">
+            <span style="font-weight:600">Step 5</span>：同一指数去重，保留成交额最大的一只
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;margin-bottom:12px;color:var(--text-secondary)">筛选漏斗：</div>
+        <div id="etf-funnel-chart" style="height:220px"></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:rgba(0,0,0,.04);border-radius:6px;font-size:13px">
+      <strong>最终：35只ETF</strong>（A股宽基 + A股行业 + 商品 + 海外QDII）&nbsp;→&nbsp; C(35,4) = <strong>52,360</strong> 个候选组合
+    </div>
+  </div>
+
+  <!-- 六阶段流水线 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">三、六阶段研究流水线</div>
+    <div id="pipeline-funnel-chart" style="height:300px"></div>
+    <table class="rank-table" style="font-size:12px;margin-top:16px">
+      <thead><tr><th>阶段</th><th>方法</th><th>条件</th><th style="text-align:right">通过数</th><th style="text-align:right">通过率</th></tr></thead>
+      <tbody>
+        <tr><td>总候选</td><td>C(35,4)</td><td>—</td><td style="text-align:right">52,360</td><td style="text-align:right">100%</td></tr>
+        <tr><td>Stage 1：快速扫描</td><td>5个代表性参数，IS Sharpe</td><td>IS Sharpe ≥ 0.7</td><td style="text-align:right">3,743</td><td style="text-align:right">7.1%</td></tr>
+        <tr><td>Stage 2：CSCV/PBO</td><td>Bailey et al. 2014，6分块20splits</td><td>logit-PBO ≤ 0.35</td><td style="text-align:right">2,360</td><td style="text-align:right">63.1%</td></tr>
+        <tr><td>Stage 3：Walk-Forward</td><td>4年训练+1年测试，每窗口独立优化</td><td>WF Sharpe &gt; 0.5，稳定性 ≥ 50%</td><td style="text-align:right">23</td><td style="text-align:right">1.0%</td></tr>
+        <tr><td>Stage 4：Bootstrap</td><td>Block(20天)，400次</td><td>筛选Top候选</td><td style="text-align:right">23</td><td style="text-align:right">—</td></tr>
+        <tr><td>Stage 5：Holdout</td><td>2024-01至今，Bonferroni校正</td><td>p &lt; 0.05/3 = 0.0167</td><td style="text-align:right"><strong>1</strong></td><td style="text-align:right"><strong>4.3%</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 随机基准 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">四、随机基准对照（500个随机4资产组合）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <table class="rank-table" style="font-size:13px">
+          <thead><tr><th>分位数</th><th>随机 IS Sharpe</th><th>随机 PBO</th></tr></thead>
+          <tbody>
+            <tr><td>P5</td><td>0.037</td><td>0.150</td></tr>
+            <tr><td>P25</td><td>0.264</td><td>0.350</td></tr>
+            <tr><td>P50</td><td>0.419</td><td>0.500</td></tr>
+            <tr><td>P75</td><td>0.589</td><td>0.700</td></tr>
+            <tr><td>P95</td><td>0.856</td><td>0.900</td></tr>
+            <tr style="background:rgba(67,160,71,.15);font-weight:700"><td>本策略</td><td style="color:#388e3c">1.456 ▲ P95</td><td style="color:#388e3c">0.000 ▼ P5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:13px;line-height:1.8">
+        <div style="margin-bottom:8px;color:var(--text-secondary)">结论：</div>
+        <div>✅ IS Sharpe <strong>1.456</strong> 高于随机 P95 = 0.856</div>
+        <div>✅ PBO <strong>0.000</strong> 低于随机 P5 = 0.150</div>
+        <div style="margin-top:8px;color:var(--text-secondary)">说明该策略极不像是随机偶然，而是存在真实信号。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最终策略 -->
+  <div class="card" style="margin-top:16px;border:2px solid #43a047">
+    <div class="card-title" style="color:#2e7d32">五、最终推荐策略（唯一通过全部检验）</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">资产池</div>
+        <table class="rank-table" style="font-size:13px">
+          <thead><tr><th>代码</th><th>名称</th><th>类别</th></tr></thead>
+          <tbody>
+            <tr><td><code>512880.SH</code></td><td>证券ETF国泰</td><td>A股券商</td></tr>
+            <tr><td><code>159941.SZ</code></td><td>纳指ETF广发</td><td>海外纳指100</td></tr>
+            <tr><td><code>513600.SH</code></td><td>恒生指数ETF南方</td><td>海外港股</td></tr>
+            <tr><td><code>512040.SH</code></td><td>价值100ETF富国</td><td>A股大盘价值</td></tr>
+            <tr><td><code>131810.SZ</code></td><td>1天逆回购</td><td>现金等价</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">策略参数（WFO最优）</div>
+        <div style="background:rgba(0,0,0,.05);padding:14px;border-radius:6px;font-family:monospace;font-size:13px;line-height:2">
+          lookback = <strong>15</strong> 天<br>
+          score_mode = <strong>R/V</strong>（风险调整动量）<br>
+          risk_weight = <strong>100%</strong>（无固定底仓）<br>
+          cooldown = <strong>5</strong> 天
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-secondary)">
+          每日信号：若所有资产15日收益&lt;0则持逆回购，否则持R/V最高者
+        </div>
+      </div>
+    </div>
+
+    <!-- 验证指标大卡片 -->
+    <div style="margin-top:20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">各阶段验证指标</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="report-kpi-grid">
+        <div style="text-align:center;padding:14px;background:rgba(25,118,210,.08);border-radius:8px;border:1px solid rgba(25,118,210,.2)">
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">PBO（过拟合概率）</div>
+          <div style="font-size:26px;font-weight:700;color:#1976d2">0.000</div>
+          <div style="font-size:11px;color:var(--text-secondary)">随机P5 = 0.150</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:rgba(25,118,210,.08);border-radius:8px;border:1px solid rgba(25,118,210,.2)">
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">WF Sharpe（滚动样本外）</div>
+          <div style="font-size:26px;font-weight:700;color:#1976d2">1.20</div>
+          <div style="font-size:11px;color:var(--text-secondary)">WF CAGR 22.1%</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:rgba(25,118,210,.08);border-radius:8px;border:1px solid rgba(25,118,210,.2)">
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">Boot p10 Sharpe</div>
+          <div style="font-size:26px;font-weight:700;color:#1976d2">1.00</div>
+          <div style="font-size:11px;color:var(--text-secondary)">400次，100%正收益</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:rgba(67,160,71,.12);border-radius:8px;border:2px solid #43a047">
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">Holdout Sharpe ✅</div>
+          <div style="font-size:26px;font-weight:700;color:#2e7d32">1.94</div>
+          <div style="font-size:11px;color:#2e7d32">p = 0.00083 &lt; 0.0167</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Walk-Forward 窗口详情 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">六、Walk-Forward 分窗口结果</div>
+    <table class="rank-table" style="font-size:13px">
+      <thead>
+        <tr>
+          <th>测试窗口</th><th>训练期</th><th>测试年份</th>
+          <th>CAGR</th><th>Sharpe</th><th>MDD</th><th>WFO选用参数</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Window 1</td><td>2015-2018</td><td>2019</td><td colspan="4" style="color:var(--text-secondary);text-align:center">跳过（513600.SH 于 2019-09-11 才上市，数据不足）</td></tr>
+        <tr><td>Window 2</td><td>2016-2019</td><td>2020</td><td>12.7%</td><td>0.820</td><td>-12.8%</td><td style="font-family:monospace;font-size:11px">lb=60, rv, rw=0.7, cd=5</td></tr>
+        <tr><td>Window 3</td><td>2017-2020</td><td>2021</td><td>30.5%</td><td>1.652</td><td>-10.3%</td><td style="font-family:monospace;font-size:11px">lb=15, rv, rw=1.0, cd=5</td></tr>
+        <tr><td>Window 4</td><td>2018-2021</td><td>2022</td><td>23.1%</td><td>1.129</td><td>-13.6%</td><td style="font-family:monospace;font-size:11px">lb=15, rv, rw=1.0, cd=5</td></tr>
+        <tr><td>Window 5</td><td>2019-2022</td><td>2023</td><td>22.7%</td><td>1.219</td><td>-9.6%</td><td style="font-family:monospace;font-size:11px">lb=15, rv, rw=1.0, cd=5</td></tr>
+        <tr style="font-weight:700;background:rgba(25,118,210,.08)"><td colspan="3">聚合（2020-2023）</td><td>22.1%</td><td>1.201</td><td>-15.9%</td><td style="font-family:monospace;font-size:11px">lb=15, rv, rw=1.0, cd=5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bootstrap -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">七、Bootstrap 稳健性（Block 20天，400次）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <table class="rank-table" style="font-size:13px">
+          <thead><tr><th>分位数</th><th>CAGR</th><th>Sharpe</th></tr></thead>
+          <tbody>
+            <tr><td>p10（悲观）</td><td style="color:#1976d2;font-weight:600">21.9%</td><td style="color:#1976d2;font-weight:600">1.004</td></tr>
+            <tr><td>p50（中位数）</td><td>36.6%</td><td>1.469</td></tr>
+            <tr><td>p90（乐观）</td><td>55.2%</td><td>—</td></tr>
+            <tr><td>正收益概率</td><td colspan="2" style="font-weight:700;color:#2e7d32">100%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="bootstrap-box-chart" style="height:200px"></div>
+    </div>
+  </div>
+
+  <!-- Holdout -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">八、Holdout 最终验证（2024-01-01 至今）</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px">
+      <div>
+        <table class="rank-table" style="font-size:13px">
+          <thead><tr><th>候选组合</th><th>Holdout CAGR</th><th>Holdout Sharpe</th><th>MDD</th><th>p值</th><th>显著</th></tr></thead>
+          <tbody>
+            <tr style="background:rgba(67,160,71,.12);font-weight:600">
+              <td>证券+纳指+恒生+价值100</td>
+              <td>48.9%</td><td>1.935</td><td>-9.4%</td>
+              <td style="color:#2e7d32">0.00083</td>
+              <td style="color:#2e7d32">✅</td>
+            </tr>
+            <tr>
+              <td>黄金+纳指+深证100+德国</td>
+              <td>22.8%</td><td>1.225</td><td>-13.1%</td>
+              <td>0.042</td><td>❌</td>
+            </tr>
+            <tr>
+              <td>传媒+纳指+红利+深成</td>
+              <td>15.4%</td><td>0.704</td><td>-23.0%</td>
+              <td>0.148</td><td>❌</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-secondary)">
+          Bonferroni 校正：α = 0.05 / 3 = <strong>0.0167</strong>，检验方法：单边 t-test（日收益率均值 vs 0），Holdout 期 537 天
+        </div>
+      </div>
+      <div style="font-size:13px;line-height:2;padding:12px;background:rgba(67,160,71,.08);border-radius:8px;border:1px solid rgba(67,160,71,.3)">
+        <div style="font-weight:600;margin-bottom:4px;color:#2e7d32">最终结论</div>
+        <div>✅ 统计显著（p=0.00083）</div>
+        <div>✅ PBO 极低（0.000）</div>
+        <div>✅ WF稳健（Sharpe=1.20）</div>
+        <div>✅ Bootstrap全正（100%）</div>
+        <div>✅ 优于随机基准P95</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 验证指引 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">九、独立回测验证指引</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">数据要求</div>
+        <table class="rank-table" style="font-size:12px">
+          <thead><tr><th>代码</th><th>复权方式</th><th>起始日期</th></tr></thead>
+          <tbody>
+            <tr><td>512880.SH</td><td>前复权收盘价</td><td>2019-09-11</td></tr>
+            <tr><td>159941.SZ</td><td>前复权收盘价</td><td>2019-09-11</td></tr>
+            <tr><td>513600.SH</td><td>前复权收盘价</td><td>2019-09-11</td></tr>
+            <tr><td>512040.SH</td><td>前复权收盘价</td><td>2019-09-11</td></tr>
+            <tr><td>131810.SZ</td><td>原始成交价</td><td>2019-09-11</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">回测配置</div>
+        <div style="background:rgba(0,0,0,.05);padding:14px;border-radius:6px;font-family:monospace;font-size:12px;line-height:2">
+          Holdout区间：2024-01-01 ~ 2026-03-26<br>
+          ETF单边费用：0.03%<br>
+          逆回购费用：0.001%<br>
+          lookback = 15<br>
+          score = R / V（15日R÷15日年化V）<br>
+          risk_weight = 1.0<br>
+          cooldown = 5
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:rgba(255,152,0,.1);border-radius:6px;font-size:12px;border-left:3px solid #ff9800">
+      <strong>预期Holdout结果</strong>：CAGR ≈ 48.9%，Sharpe ≈ 1.93，MDD ≈ -9.4%（2024-01-01至2026-03-26）<br>
+      <strong>预期WFO结果</strong>（各年用对应窗口参数）：2020年CAGR≈12.7%，2021年≈30.5%，2022年≈23.1%，2023年≈22.7%
+    </div>
+  </div>
+
+  <!-- 风险提示 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">十、风险提示</div>
+    <table class="rank-table" style="font-size:13px">
+      <thead><tr><th>风险</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>Holdout样本期短</td><td>仅15个月（537天），2024年恰逢A股+港股+纳指同步大涨，未来可能不重复</td></tr>
+        <tr><td>IS年限有限</td><td>513600恒生指数ETF上市于2019年，有效回测仅4.7年，长期稳健性有限</td></tr>
+        <tr><td>行业ETF集中风险</td><td>证券ETF在熊市中可能大幅下跌（历史最大回撤超-50%）</td></tr>
+        <tr><td>策略拥挤风险</td><td>R/V动量策略如被广泛使用，信号有效性可能减弱</td></tr>
+        <tr><td>滑点与冲击成本</td><td>证券ETF T+0买入，真实成交价可能偏离，建议避开开盘前30分钟</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="height:32px"></div>
+</div>
+</div>
+
 <!-- 数据文件（全局变量，兼容 file:// 协议） -->
 <script src="data/cockpit.js"></script>
 <script src="data/compare.js"></script>
@@ -198,6 +497,7 @@
 <script src="js/cockpit.js"></script>
 <script src="js/compare.js"></script>
 <script src="js/research.js"></script>
+<script src="js/report.js"></script>
 <script src="js/app.js"></script>
 
 </body>

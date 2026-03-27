@@ -14,6 +14,7 @@ function switchTab(name) {
   if (name === 'cockpit') initCockpit();
   if (name === 'compare') initCompare();
   if (name === 'research') initResearch();
+  if (name === 'report') initReport();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
